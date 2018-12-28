@@ -107,7 +107,7 @@ for kreps = 1 : niter
     
     % LSQ silly 
     resCov = cov([Xs(1:end-1,:), U(1:end-1,:)] * [Ah', Ch'; Bh', Dh'] - ...
-        [Xs(2:end,:), Y(1:end-1,:)])
+        [Xs(2:end,:), Y(1:end-1,:)]);
 %     Qh = resCov(1:nx,1:nx);
 %     Rh = resCov(nx+(1:ny),nx+(1:ny));
 %     Sh = resCov(1:nx,nx+(1:ny));

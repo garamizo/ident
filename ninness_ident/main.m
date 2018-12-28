@@ -1,43 +1,51 @@
-%% Define SS model
+%% Generate SS model and data
 clear
+rng(1)
 
-A = [0.9, 0.1
-    -0.1, 0.9];
+nx = 3;
+ny = 1;
+nu = 1;
+Fs = 350;
+N = 1000;
 
-B = [0.1, -0.2
-    1, -1.1];
+Q = 1e-1 * randn(nx,1); Q = Q * Q';
+R = 1e-1 * randn(ny,1); R = R * R';
+W = mvnrnd(zeros(nx,1), Q, N);
+V = mvnrnd(zeros(ny,1), R, N);
 
-H = [1, 0];
+sysn = drss(nx, ny, nu);
+sysan = ss(sysn.A, [sysn.B, eye(nx)], sysn.C, [sysn.D, zeros(1, nx)], 1/Fs);
 
-Q = [1e-1, 0; 0, 1e-1];  % state noise
-R = diag(1);  % meas noise
-
-%% Create data
-
-N = 300;  % number of samples
-nx = size(A, 1);
-nu = size(B, 2);
-ny = size(H, 1);
-
-X = zeros(N, nx);
-Y = zeros(N, ny);
-Z = zeros(N, ny);
-
+T = (0:N-1)' / Fs;
 U = randn(N, nu);
-X0 = [5; -5];
+X0 = randn(nx,1);
 
-for k = 1 : N
-    X0 = A * X0 + B * U(k,:)' + mvnrnd(zeros(nx,1), Q)';
-    
-    X(k,:) = X0';
-    Y(k,:) = (H * X0)';
-    Z(k,:) = (H * X0 + mvnrnd(zeros(ny,1), R)')';
-end
+[Y, ~, X] = lsim(sysan, [U, W], T, X0);
+Z = Y + V;
 
-% figure
-% subplot(131), plot(X), title('X')
-% subplot(132), plot(U), title('U')
-% subplot(133), plot(Y, '--'), hold on, set(gca, 'ColorOrderIndex', 1), plot(Z), title('Y')
+figure
+subplot(131), plot(X), title('X')
+hold on, set(gca, 'ColorOrderIndex', 1), plot(X-W, ':')
+subplot(132), plot(U), title('U')
+subplot(133), plot(Y, '--'), hold on, set(gca, 'ColorOrderIndex', 1), plot(Z), title('Y')
+
+%% Estimate with subspace
+
+data = iddata(Z, U, 1/Fs);
+
+% Import   data               
+ datae = data([1:750]);
+ datav = iddata(Y, U, 1/Fs);
+ datav = datav([750:1000]);
+                               
+% State space model estimation 
+ Options = n4sidOptions;       
+ Options.Display = 'off';
+ Options.EnforceStability = true;
+                               
+ ss1 = n4sid(datae, 3, Options)
+ figure, compare(datav, ss1, sysn)
+                               
 
 %% Smooth
 
