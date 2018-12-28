@@ -8,8 +8,7 @@ nu = 1;
 Fs = 350;
 N = 1000;
 
-FIT = zeros(10, ny);
-
+FIT = zeros(10, nx);
 
 for k = 1 : 10
     rng(k)
@@ -37,34 +36,41 @@ Z = Y + V;
 % subplot(132), plot(U), title('U')
 % subplot(133), plot(Y, '--'), hold on, set(gca, 'ColorOrderIndex', 1), plot(Z), title('Y')
 
-%% Separate training and validation data
+%% smooth
+P0 = eye(nx);
+[Xh, X0h, P0h] = linear_smooth(U, Z, X0*0, P0, sysn.A, sysn.B, sysn.C, sysn.D, ...
+    Q, R, zeros(nx,ny));
 
-data = iddata(Z, U, 1/Fs);
-
-% Import   data               
-datae = data([1:750]);
-datav = iddata(Y, U, 1/Fs);
-datav = datav([750:1000]);
-                               
-%% State space model estimation 
-%  Options = n4sidOptions;       
-%  Options.Display = 'off';
-%  Options.EnforceStability = true;          
-%  ss1 = n4sid(datae, 3, Options);
- 
-%% Ninness estimation
-ss2 = ninnessid(datae, 3, []);
+% %% filter
+% A = sysn.A;
+% B = sysn.B;
+% C = sysn.C;
+% D = sysn.D;
+% 
+% kf = extendedKalmanFilter(@(x,u) A*x + B*u, ...
+%     @(x,u) C*x + D*u, X0);
+% kf.ProcessNoise = Q;
+% kf.MeasurementNoise = R;
+% 
+% Xh = zeros(size(Y,1), nx);
+% 
+% for i = 1:size(Y,1)
+%     [CorrectedState,CorrectedStateCovariance] = correct(kf, Z(i,:)', U(i,:)');
+%     Xh(i,:) = CorrectedState';
+%     [PredictedState,PredictedStateCovariance] = predict(kf, U(i,:)');
+% end
 
 %%
- 
- 
- [~,fit,~] = compare(datav, ss1);
- 
-%  figure, compare(datav, ss1, sysn)
+
+% figure
+% plot(X, ':')
+% hold on, set(gca, 'ColorOrderIndex', 1), plot(Xh)
+
+fit = goodnessOfFit(Xh, X, 'NRMSE');
 
 FIT(k,:) = fit';
 end
       
 FIT
+mean(FIT), std(FIT)
 
-%% Smooth
